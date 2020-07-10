@@ -93,7 +93,9 @@ public class ClientHandler {
                         }
                     }
                 }
+
                 catch (SocketTimeoutException e) {
+                    sendMsg("Время ожидания вышло. Вы отключены от сервера");
                     sendMsg("/end");
                 }
 
