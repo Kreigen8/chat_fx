@@ -34,8 +34,8 @@ public class Server {
             while (true) {
                 socket = server.accept();
                 System.out.println("Клиент подключился");
-                System.out.println("socket.getRemoteSocketAddress(): "+socket.getRemoteSocketAddress());
-                System.out.println("socket.getLocalSocketAddress() "+socket.getLocalSocketAddress());
+                System.out.println("socket.getRemoteSocketAddress(): " + socket.getRemoteSocketAddress());
+                System.out.println("socket.getLocalSocketAddress() " + socket.getLocalSocketAddress());
                 new ClientHandler(this, socket);
             }
         } catch (IOException e) {
@@ -49,31 +49,59 @@ public class Server {
         }
     }
 
-    void broadcastMsg(ClientHandler sender, String msg){
+    void broadcastMsg(ClientHandler sender, String msg) {
+        String message = String.format("%s : %s", sender.getNick(), msg);
+
         for (ClientHandler client : clients) {
-            client.sendMsg(String.format("%s: %s", sender.getNick(), msg));
+            client.sendMsg(message);
         }
     }
 
-    void privateMsg(ClientHandler sender, String recipient, String msg){
+    void privateMsg(ClientHandler sender, String receiver, String msg) {
+        String message = String.format("[%s] private [%s] : %s", sender.getNick(), receiver, msg);
 
-        for (ClientHandler client : clients) {
-            String message = String.format("%s private %s: %s", sender.getNick(), recipient, msg);
-            if (client.getNick().equals(recipient)){
-                client.sendMsg(message);
+        for (ClientHandler c : clients) {
+            if(c.getNick().equals(receiver)){
+                c.sendMsg(message);
                 sender.sendMsg(message);
                 return;
             }
         }
-        sender.sendMsg(String.format("Получатель не найден", recipient));
+        sender.sendMsg(String.format("Client %s not found", receiver));
     }
 
-    public void subscribe(ClientHandler clientHandler){
+
+    public void subscribe(ClientHandler clientHandler) {
         clients.add(clientHandler);
+        broadcastClientList();
     }
 
-    public void unsubscribe(ClientHandler clientHandler){
+    public void unsubscribe(ClientHandler clientHandler) {
         clients.remove(clientHandler);
+        broadcastClientList();
+    }
+
+    public boolean isLoginAuthorized(String login){
+        for (ClientHandler c : clients) {
+            if(c.getLogin().equals(login)){
+                return true;
+            }
+        }
+        return false;
+    }
+
+    void broadcastClientList() {
+        StringBuilder sb = new StringBuilder("/clientlist ");
+
+        for (ClientHandler c : clients) {
+            sb.append(c.getNick()).append(" ");
+        }
+
+        String msg = sb.toString();
+
+        for (ClientHandler c : clients) {
+            c.sendMsg(msg);
+        }
     }
 
 }
