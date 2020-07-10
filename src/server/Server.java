@@ -49,14 +49,23 @@ public class Server {
         }
     }
 
-    void broadcastMsg(ClientHandler me, String msg){
+    void broadcastMsg(ClientHandler sender, String msg){
         for (ClientHandler client : clients) {
-            client.sendMsg(msg);
+            client.sendMsg(String.format("%s: %s", sender.getNick(), msg));
         }
     }
 
-    void privateMsg(String msg){
+    void privateMsg(ClientHandler sender, String recipient, String msg){
 
+        for (ClientHandler client : clients) {
+            String message = String.format("%s private %s: %s", sender.getNick(), recipient, msg);
+            if (client.getNick().equals(recipient)){
+                client.sendMsg(message);
+                sender.sendMsg(message);
+                return;
+            }
+        }
+        sender.sendMsg(String.format("Получатель не найден", recipient));
     }
 
     public void subscribe(ClientHandler clientHandler){
