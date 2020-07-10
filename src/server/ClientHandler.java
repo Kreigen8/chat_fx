@@ -4,6 +4,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 
 public class ClientHandler {
     Server server;
@@ -23,7 +24,7 @@ public class ClientHandler {
 
             new Thread(() -> {
                 try {
-//                    socket.setSoTimeout(5000);
+                    socket.setSoTimeout(5000);
 
                     //цикл аутентификации
                     while (true) {
@@ -92,7 +93,9 @@ public class ClientHandler {
                         }
                     }
                 }
-                ///
+                catch (SocketTimeoutException e) {
+                    sendMsg("/end");
+                }
 
                 catch (IOException e) {
                     e.printStackTrace();
