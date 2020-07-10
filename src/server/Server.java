@@ -62,8 +62,14 @@ public class Server {
 
         for (ClientHandler c : clients) {
             if(c.getNick().equals(receiver)){
-                c.sendMsg(message);
-                sender.sendMsg(message);
+                if(sender.getNick().equals(receiver)){
+                    c.sendMsg(message);
+                } else {
+                    c.sendMsg(message);
+                    sender.sendMsg(message);
+                }
+
+
                 return;
             }
         }
