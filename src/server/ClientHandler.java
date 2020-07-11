@@ -1,10 +1,10 @@
 package server;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.Socket;
+import java.net.SocketException;
 import java.net.SocketTimeoutException;
+import java.util.concurrent.TimeoutException;
 
 public class ClientHandler {
     Server server;
@@ -14,6 +14,7 @@ public class ClientHandler {
 
     private String nick;
     private String login;
+    Boolean authOk;
 
     public ClientHandler(Server server, Socket socket) {
         try {
@@ -44,7 +45,10 @@ public class ClientHandler {
                                     sendMsg("/authok " + newNick);
                                     nick = newNick;
                                     server.subscribe(this);
+                                    authOk = true;
                                     System.out.printf("Клиент %s подключился \n", nick);
+                                    System.out.println(authOk);
+                                    socket.setSoTimeout(0);
                                     break;
                                 } else {
                                     sendMsg("С этим логином уже авторизовались");
@@ -60,13 +64,14 @@ public class ClientHandler {
                                 continue;
                             }
                             boolean b = server.getAuthService()
-                                    .registration(token[1],token[2],token[3]);
-                            if(b){
+                                    .registration(token[1], token[2], token[3]);
+                            if (b) {
                                 sendMsg("/regresult ok");
-                            }else{
+                            } else {
                                 sendMsg("/regresult failed");
                             }
                         }
+                        socket.getInputStream();
 
                     }
                     //цикл работы
@@ -94,10 +99,20 @@ public class ClientHandler {
                     }
                 }
 
-                catch (SocketTimeoutException e) {
-                    sendMsg("Время ожидания вышло. Вы отключены от сервера");
-                    sendMsg("/end");
-                }
+
+
+//                catch (SocketTimeoutException e) {
+//                    if (authOk = false) {
+//                        sendMsg("Время ожидания вышло. Вы отключены от сервера");
+//                        sendMsg("/end");
+//                    }
+//                    try {
+//                        socket.setSoTimeout(0);
+//                    } catch (SocketException socketException) {
+//                        socketException.printStackTrace();
+//                    }
+//                }
+
 
                 catch (IOException e) {
                     e.printStackTrace();
