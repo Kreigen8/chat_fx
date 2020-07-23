@@ -1,9 +1,10 @@
 package server;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.Socket;
+import java.net.SocketException;
+import java.net.SocketTimeoutException;
+import java.util.concurrent.TimeoutException;
 
 public class ClientHandler {
     Server server;
@@ -23,6 +24,8 @@ public class ClientHandler {
 
             new Thread(() -> {
                 try {
+                    socket.setSoTimeout(120000);
+
                     //цикл аутентификации
                     while (true) {
                         String str = in.readUTF();
@@ -35,30 +38,72 @@ public class ClientHandler {
                             String newNick = server
                                     .getAuthService()
                                     .getNicknameByLoginAndPassword(token[1], token[2]);
+                            login = token[1];
                             if (newNick != null) {
-                                sendMsg("/authok " + newNick);
-                                nick = newNick;
-                                login = token[1];
-                                server.subscribe(this);
-                                System.out.printf("Клиент %s подключился \n", nick);
-                                break;
+                                if (!server.isLoginAuthorized(login)) {
+                                    sendMsg("/authok " + newNick);
+                                    nick = newNick;
+                                    server.subscribe(this);
+                                    System.out.printf("Клиент %s подключился \n", nick);
+                                    socket.setSoTimeout(0);
+                                    break;
+                                } else {
+                                    sendMsg("С этим логином уже авторизовались");
+                                }
                             } else {
                                 sendMsg("Неверный логин / пароль");
                             }
                         }
+
+                        if (str.startsWith("/reg ")) {
+                            String[] token = str.split("\\s");
+                            if (token.length < 4) {
+                                continue;
+                            }
+                            boolean b = server.getAuthService()
+                                    .registration(token[1], token[2], token[3]);
+                            if (b) {
+                                sendMsg("/regresult ok");
+                            } else {
+                                sendMsg("/regresult failed");
+                            }
+                        }
                     }
+
                     //цикл работы
                     while (true) {
                         String str = in.readUTF();
 
-                        if (str.equals("/end")) {
-                            out.writeUTF("/end");
-                            break;
-                        }
+                        if (str.startsWith("/")) {
+                            if (str.equals("/end")) {
+                                out.writeUTF("/end");
+                                break;
+                            }
 
-                        server.broadcastMsg(this, str);
+                            if (str.startsWith("/w ")) {
+                                String[] token = str.split("\\s", 3);
+                                if (token.length < 3) {
+                                    continue;
+                                }
+
+                                server.privateMsg(this, token[1], token[2]);
+                            }
+
+                        } else {
+                            server.broadcastMsg(this, str);
+                        }
                     }
-                } catch (IOException e) {
+                }
+
+
+
+                catch (SocketTimeoutException e) {
+                        sendMsg("Время ожидания вышло. Вы отключены от сервера");
+                        sendMsg("/end");
+                }
+
+
+                catch (IOException e) {
                     e.printStackTrace();
                 } finally {
                     System.out.println("Клиент отключился");
@@ -95,5 +140,9 @@ public class ClientHandler {
 
     public String getNick() {
         return nick;
+    }
+
+    public String getLogin() {
+        return login;
     }
 }
